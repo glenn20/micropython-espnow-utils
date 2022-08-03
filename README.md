@@ -1,4 +1,4 @@
-# ESPNow Utilities
+# Micropython ESPNow Utilities
 A collection of small utilities for use with espnow and wifi on micropython
 
 - `lib/wifi.py`: A small module to bulletproof initialising wifi on ESP32 and ESP8266 devices.
