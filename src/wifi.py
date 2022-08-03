@@ -11,8 +11,8 @@
 
 #     # Reset wifi to know state (STA is disconnected)
 #     sta, ap = wifi.reset()               # STA on, AP off, channel=1
-#     sta, ap = wifi.reset(True, True, 5)  # STA on, AP on, channel=5
-#     sta, ap = wifi.reset(False, False)   # STA on, AP on, channel=1
+#     sta, ap = wifi.reset(sta=True, ap=True, channel=5)  # STA on, AP on, channel=5
+#     sta, ap = wifi.reset(False, False)   # STA off, AP off, channel=1
 #     sta, ap = wifi.reset(ap=True)        # STA on, AP on, channel=1
 #     sta, ap = wifi.reset(channel=11)     # STA on, AP off, channel=11
 
@@ -59,8 +59,10 @@ def channel(channel=0):
         return _ap.config("channel")
     if _sta.isconnected():
         print("Error: can not set channel when connected to wifi network.")
+        raise OSError()
     if _ap.isconnected():
         print("Error: can not set channel when clients are connected to AP.")
+        raise OSError()
     if not is_esp8266:
         _sta.config(channel=channel)  # On ESP32 use STA interface
         return _sta.config("channel")
