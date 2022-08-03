@@ -1,7 +1,7 @@
 # Micropython ESPNow Utilities
 A collection of small utilities for use with espnow and wifi on micropython
 
-- `lib/wifi.py`: A small module to bulletproof initialising wifi on ESP32 and
+- `src/wifi.py`: A small module to bulletproof initialising wifi on ESP32 and
   ESP8266 devices.
 
 These functions are designed to robustly and reliably account for differences
@@ -17,7 +17,7 @@ wifi.connect("ssid", "password")
 wifi.status()            # Print details on wifi config
 ```
 
-- `lib/scan_for_peer.py`: Scan channels to find an ESPNow peer.
+- `src/scan_for_peer.py`: Scan channels to find an ESPNow peer.
 
 ```python
 from scan_for_peer import scan_for_peer
@@ -26,7 +26,7 @@ scan_for_peer(b'macadd')  # Print channel if found and leave set to channel
 
 ```
 
-- `lib/lazyespnow.py`: LazyESPNow() extends ESPNow class to catch and fix most
+- `src/lazyespnow.py`: LazyESPNow() extends ESPNow class to catch and fix most
   common errors.
 
 ```python
@@ -37,7 +37,7 @@ enow = LazyESPNow()
 enow.send(peer, message)    # Automatically call active(True) and add_peer()
 ```
 
-- `lib/ntp.py`: Set the time from an NTP server over wifi.
+- `src/ntp.py`: Set the time from an NTP server over wifi.
 
 ```python
 import ntp
@@ -45,7 +45,7 @@ ntp.server = "192.168.1.1"
 ntp.settime()
 ```
 
-- `lib/timer.py`: A useful collection of easy to user python timer objects.
+- `src/timer.py`: A useful collection of easy to user python timer objects.
 
 ```python
 import timer
@@ -54,7 +54,7 @@ for t in timer_ms(5000, 1000, raise_on_timeout=True):
     print(t)
 ```
 
-- `lib/echo.py`: A simple ESPNow server that echos messages back to the sender.
+- `src/echo.py`: A simple ESPNow server that echos messages back to the sender.
 
 ```python
 import echo
