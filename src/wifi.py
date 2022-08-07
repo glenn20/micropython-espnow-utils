@@ -45,13 +45,20 @@ import network
 class TimeoutError(Exception):
     pass
 
+this = sys.modules[__name__]
 
 is_esp8266 = sys.platform == "esp8266"
 wlans = [network.WLAN(w) for w in (network.STA_IF, network.AP_IF)]
 _sta, _ap = wlans
 timeout = 20  # (seconds) timeout on connect()
-ps_mode = None if is_esp8266 else network.WIFI_PS_NONE
-protocol = None if is_esp8266 else network.MODE_11B | network.MODE_11G | network.MODE_11N
+try:
+    ps_mode = network.WIFI_PS_NONE
+except AttributeError:
+    ps_mode = None
+try:
+    protocol = network.MODE_11B | network.MODE_11G | network.MODE_11N
+except AttributeError:
+    protocol = None
 
 
 def channel(channel=0):
@@ -98,18 +105,20 @@ def connect(*args, **kwargs):
     wait_for(lambda: _sta.isconnected())
     ssid, chan = _sta.config("ssid"), channel()
     print('Connected to "{}" on wifi channel {}'.format(ssid, chan))
-    if not is_esp8266:   # Set preferred power saving mode after connect
+    if ps_mode is not None:   # Set preferred power saving mode after connect
         _sta.config(ps_mode=ps_mode)
 
 
-def reset(sta=True, ap=False, channel=1):
+def reset(sta=True, ap=False, channel=1, ps_mode=ps_mode, protocol=protocol):
     "Reset wifi to STA_IF on, AP_IF off, channel=1 and disconnected"
     _sta.active(False)  # Force into know state by turning off radio
     _ap.active(False)
     _sta.active(sta)  # Now set to requested state
     _ap.active(ap)
     disconnect()  # For ESP8266
-    if not is_esp8266:
+    this.ps_mode = ps_mode
+    this.protocol = protocol
+    if protocol is not None:
         _sta.config(protocol=protocol)
     set_channel(channel)
     return _sta, _ap
@@ -126,11 +135,14 @@ def status():
     connected = ("connected: " + _sta.config("ssid")) if _sta.isconnected() else "disconnected"
     channel = _ap.config("channel")
     print("     {}, channel={:d}".format(connected, channel), end="")
-    if not is_esp8266:
-        ps_mode = _sta.config("ps_mode")
-        protocol = _sta.config("protocol")
-        print(", ps_mode={:d}, protocol={:d}".format(ps_mode, protocol))
-    else:
-        print()
+    try:
+        print(", ps_mode={:d}".format(_sta.config("ps_mode")), end="")
+    except ValueError:
+        pass
+    try:
+        print(", protocol={:d}".format(_sta.config("protocol")), end="")
+    except ValueError:
+        pass
+    print()
     if _sta.isconnected():
         print("     ifconfig:", _sta.ifconfig())

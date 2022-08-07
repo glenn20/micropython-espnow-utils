@@ -59,5 +59,5 @@ for t in timer_ms(5000, 1000, raise_on_timeout=True):
 ```python
 import echo
 
-echo_server()       # Wait for incoming messages and echo back to sender
+echo.server()       # Wait for incoming messages and echo back to sender
 ```
