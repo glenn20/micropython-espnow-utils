@@ -118,8 +118,10 @@ def reset(sta=True, ap=False, channel=1, ps_mode=ps_mode, protocol=protocol):
     disconnect()  # For ESP8266
     this.ps_mode = ps_mode
     this.protocol = protocol
-    if protocol is not None:
+    try:
         _sta.config(protocol=protocol)
+    except ValueError:
+        pass
     set_channel(channel)
     return _sta, _ap
 
