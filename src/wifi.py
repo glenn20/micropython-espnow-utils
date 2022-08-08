@@ -40,6 +40,7 @@
 import sys
 import time
 import network
+import esp
 
 
 class TimeoutError(Exception):
@@ -54,10 +55,10 @@ sta, ap = wlans
 _sta, _ap = wlans
 timeout = 20  # (seconds) timeout on connect()
 default_channel = 1
-try:
+if is_esp8266:
+    default_ps_mode = esp.SLEEP_NONE
+else:
     default_ps_mode = network.WIFI_PS_NONE
-except AttributeError:
-    default_ps_mode = None
 try:
     default_protocol = network.MODE_11B | network.MODE_11G | network.MODE_11N
 except AttributeError:
@@ -119,8 +120,11 @@ def reset(
     _ap.active(ap)
     if sta:
         disconnect()  # For ESP8266
-    if sta and ps_mode is not None:  # Not necessary here - but is expected by users
-        _sta.config(ps_mode=ps_mode)
+    if sta:  # Not necessary here - but is expected by users
+        if is_esp8266:
+            esp.sleep_type(ps_mode)
+        else:
+            _sta.config(ps_mode=ps_mode)
     try:
         wlan = _sta if sta else _ap if ap else None
         if wlan and (protocol is not None):
@@ -145,14 +149,20 @@ def status():
         print("     disconnected", end="")
     print(", channel={:d}".format(_ap.config("channel")), end="")
     try:
-        print(", ps_mode={:d}".format(_sta.config("ps_mode")), end="")
+        if is_esp8266:
+            names = {0: "SLEEP_NONE", 1: "SLEEP_LIGHT", 2: "SLEEP_MODEM"}
+            ps_mode = esp.sleep_type()
+        else:
+            names = {0: "WIFI_PS_NONE", 1: "WIFI_PS_MIN_MODEM", 2: "WIFI_PS_MAX_MODEM"}
+            ps_mode = _sta.config("ps_mode")
+        print(", ps_mode={:d} ({})".format(ps_mode, names[ps_mode]), end="")
     except ValueError:
         pass
     try:
         names = ("MODE_11B", "MODE_11G", "MODE_11N", "MODE_LR")
         protocol = _sta.config("protocol")
         p = "|".join((x for x in names if protocol & getattr(network, x)))
-        print(", protocol={}".format(p), end="")
+        print(", protocol={:d} ({})".format(protocol, p), end="")
     except ValueError:
         pass
     print()
