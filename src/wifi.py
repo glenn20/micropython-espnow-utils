@@ -50,8 +50,8 @@ this = sys.modules[__name__]  # A reference to this module
 
 is_esp8266 = sys.platform == "esp8266"
 wlans = [network.WLAN(w) for w in (network.STA_IF, network.AP_IF)]
-_sta, _ap = wlans
 sta, ap = wlans
+_sta, _ap = wlans
 timeout = 20  # (seconds) timeout on connect()
 default_channel = 1
 try:
@@ -106,7 +106,11 @@ def connect(*args, **kwargs):
 
 
 def reset(
-    sta=True, ap=False, channel=default_channel, ps_mode=default_ps_mode, protocol=default_protocol
+    sta=True,
+    ap=False,
+    channel=default_channel,
+    ps_mode=default_ps_mode,
+    protocol=default_protocol,
 ):
     "Reset wifi to STA_IF on, AP_IF off, channel=1 and disconnected"
     _sta.active(False)  # Force into know state by turning off radio
@@ -135,9 +139,11 @@ def status():
         mac = w.config("mac")
         hex = hexlify(mac, ":").decode()
         print("{:3s}: {:4s} mac= {} ({})".format(name, active, hex, mac))
-    connected = ("connected: " + _sta.config("essid")) if _sta.isconnected() else "disconnected"
-    channel = _ap.config("channel")
-    print("     {}, channel={:d}".format(connected, channel), end="")
+    if _sta.isconnected():
+        print("     connected:", _sta.config("essid"), end="")
+    else:
+        print("     disconnected", end="")
+    print(", channel={:d}".format(_ap.config("channel")), end="")
     try:
         print(", ps_mode={:d}".format(_sta.config("ps_mode")), end="")
     except ValueError:
