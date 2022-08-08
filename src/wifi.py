@@ -45,32 +45,33 @@ import network
 class TimeoutError(Exception):
     pass
 
-this = sys.modules[__name__]
+
+this = sys.modules[__name__]  # A reference to this module
 
 is_esp8266 = sys.platform == "esp8266"
 wlans = [network.WLAN(w) for w in (network.STA_IF, network.AP_IF)]
 _sta, _ap = wlans
+sta, ap = wlans
 timeout = 20  # (seconds) timeout on connect()
+default_channel = 1
 try:
-    ps_mode = network.WIFI_PS_NONE
+    default_ps_mode = network.WIFI_PS_NONE
 except AttributeError:
-    ps_mode = None
+    default_ps_mode = None
 try:
-    protocol = network.MODE_11B | network.MODE_11G | network.MODE_11N
+    default_protocol = network.MODE_11B | network.MODE_11G | network.MODE_11N
 except AttributeError:
-    protocol = None
+    default_protocol = None
 
 
 def channel(channel=0):
     if channel == 0:
         return _ap.config("channel")
     if _sta.isconnected():
-        print("Error: can not set channel when connected to wifi network.")
-        raise OSError()
+        raise OSError("can not set channel when connected to wifi network.")
     if _ap.isconnected():
-        print("Error: can not set channel when clients are connected to AP.")
-        raise OSError()
-    if not is_esp8266:
+        raise OSError("can not set channel when clients are connected to AP.")
+    if _sta.active() and not is_esp8266:
         _sta.config(channel=channel)  # On ESP32 use STA interface
         return _sta.config("channel")
     else:
@@ -80,9 +81,6 @@ def channel(channel=0):
         _ap.config(channel=channel)  # Catch exceptions so we can reset AP_IF
         _ap.active(ap_save)
         return _ap.config("channel")
-
-
-set_channel = channel
 
 
 def wait_for(fun, timeout=timeout):
@@ -99,30 +97,33 @@ def disconnect():
 
 
 def connect(*args, **kwargs):
-    if _sta.isconnected():
-        disconnect()
+    _sta.active(True)
+    disconnect()
     _sta.connect(*args, **kwargs)
     wait_for(lambda: _sta.isconnected())
-    ssid, chan = _sta.config("ssid"), channel()
+    ssid, chan = _sta.config("essid"), channel()
     print('Connected to "{}" on wifi channel {}'.format(ssid, chan))
-    if ps_mode is not None:   # Set preferred power saving mode after connect
-        _sta.config(ps_mode=ps_mode)
 
 
-def reset(sta=True, ap=False, channel=1, ps_mode=ps_mode, protocol=protocol):
+def reset(
+    sta=True, ap=False, channel=default_channel, ps_mode=default_ps_mode, protocol=default_protocol
+):
     "Reset wifi to STA_IF on, AP_IF off, channel=1 and disconnected"
     _sta.active(False)  # Force into know state by turning off radio
     _ap.active(False)
     _sta.active(sta)  # Now set to requested state
     _ap.active(ap)
-    disconnect()  # For ESP8266
-    this.ps_mode = ps_mode
-    this.protocol = protocol
+    if sta:
+        disconnect()  # For ESP8266
+    if sta and ps_mode is not None:  # Not necessary here - but is expected by users
+        _sta.config(ps_mode=ps_mode)
     try:
-        _sta.config(protocol=protocol)
-    except ValueError:
+        wlan = _sta if sta else _ap if ap else None
+        if wlan and (protocol is not None):
+            wlan.config(protocol=protocol)
+    except (ValueError, RuntimeError):
         pass
-    set_channel(channel)
+    this.channel(channel)
     return _sta, _ap
 
 
@@ -134,7 +135,7 @@ def status():
         mac = w.config("mac")
         hex = hexlify(mac, ":").decode()
         print("{:3s}: {:4s} mac= {} ({})".format(name, active, hex, mac))
-    connected = ("connected: " + _sta.config("ssid")) if _sta.isconnected() else "disconnected"
+    connected = ("connected: " + _sta.config("essid")) if _sta.isconnected() else "disconnected"
     channel = _ap.config("channel")
     print("     {}, channel={:d}".format(connected, channel), end="")
     try:
@@ -142,7 +143,10 @@ def status():
     except ValueError:
         pass
     try:
-        print(", protocol={:d}".format(_sta.config("protocol")), end="")
+        names = ("MODE_11B", "MODE_11G", "MODE_11N", "MODE_LR")
+        protocol = _sta.config("protocol")
+        p = "|".join((x for x in names if protocol & getattr(network, x)))
+        print(", protocol={}".format(p), end="")
     except ValueError:
         pass
     print()
