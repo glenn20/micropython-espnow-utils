@@ -55,14 +55,10 @@ sta, ap = wlans
 _sta, _ap = wlans
 timeout = 20  # (seconds) timeout on connect()
 default_channel = 1
-default_pm_mode = None
-if is_esp8266:
-    default_pm_mode = esp.SLEEP_NONE
-else:
-    try:
-        default_pm_mode = sta.PM_NONE
-    except AttributeError:
-        pass
+try:
+    default_pm_mode = sta.PM_PERFORMANCE
+except AttributeError:
+    default_pm_mode = None
 try:
     default_protocol = network.MODE_11B | network.MODE_11G | network.MODE_11N
 except AttributeError:
@@ -106,7 +102,7 @@ def connect(*args, **kwargs):
     disconnect()
     _sta.connect(*args, **kwargs)
     wait_for(lambda: _sta.isconnected())
-    ssid, chan = _sta.config("essid"), channel()
+    ssid, chan = _sta.config("ssid"), channel()
     print('Connected to "{}" on wifi channel {}'.format(ssid, chan))
 
 
@@ -124,14 +120,10 @@ def reset(
     _ap.active(ap)
     if sta:
         disconnect()  # For ESP8266
-    if sta:  # Not necessary here - but is expected by users
-        if is_esp8266:
-            esp.sleep_type(pm)
-        else:
-            try:
-                _sta.config(pm=pm)
-            except (ValueError):
-                pass
+        try:
+            _sta.config(pm=pm)
+        except (ValueError):
+            pass
     try:
         wlan = _sta if sta else _ap if ap else None
         if wlan and (protocol is not None):
@@ -151,24 +143,28 @@ def status():
         hex = hexlify(mac, ":").decode()
         print("{:3s}: {:4s} mac= {} ({})".format(name, active, hex, mac))
     if _sta.isconnected():
-        print("     connected:", _sta.config("essid"), end="")
+        print("     connected:", _sta.config("ssid"), end="")
     else:
         print("     disconnected", end="")
     print(", channel={:d}".format(_ap.config("channel")), end="")
+    pm_mode = None
     try:
-        if is_esp8266:
-            names = {0: "SLEEP_NONE", 1: "SLEEP_LIGHT", 2: "SLEEP_MODEM"}
-            pm_mode = esp.sleep_type()
-        else:
-            names = {0: "PM_NONE", 1: "PM_MIN_MODEM", 2: "PM_MAX_MODEM"}
-            pm_mode = _sta.config("pm")
+        pm_mode = _sta.config("pm")
+        names = {
+            _sta.PM_NONE: "PM_NONE",
+            _sta.PM_PERFORMANCE: "PM_PERFORMANCE",
+            _sta.PM_POWERSAVE: "PM_POWERSAVE",
+            }
         print(", pm={:d} ({})".format(pm_mode, names[pm_mode]), end="")
-    except ValueError:
-        pass
+    except (AttributeError, ValueError):
+        print(", pm={}".format(pm_mode), end="")
     try:
         names = ("MODE_11B", "MODE_11G", "MODE_11N", "MODE_LR")
         protocol = _sta.config("protocol")
-        p = "|".join((x for x in names if protocol & getattr(network, x)))
+        try:
+            p = "|".join((x for x in names if protocol & getattr(network, x)))
+        except AttributeError:
+            p = ""
         print(", protocol={:d} ({})".format(protocol, p), end="")
     except ValueError:
         pass
