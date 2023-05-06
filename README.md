@@ -22,7 +22,7 @@ wifi.status()            # Print details on wifi config
 ```python
 from scan_for_peer import scan_for_peer
 
-scan_for_peer(b'macadd')  # Print channel if found and leave set to channel
+scan_for_peer(e, b'macadd')  # Print channel if found and leave set to channel
 
 ```
 

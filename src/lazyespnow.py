@@ -12,11 +12,13 @@ def _handle_esperror(self, err, peer):
 
     esperr = err.args[1]
     if esperr == 'ESP_ERR_ESPNOW_NOT_INIT':
-        if self.debug: print("LazyESPNow: init()")
+        if self.debug:
+            print("LazyESPNow: init()")
         self.active(True)
 
     elif esperr == 'ESP_ERR_ESPNOW_NOT_FOUND':
-        if self.debug: print("LazyESPNow: add_peer()")
+        if self.debug:
+            print("LazyESPNow: add_peer()")
         # Restore the saved options for this peer - if we have it
         args = self._saved_peers.get(peer, [])
         self.add_peer(peer, *args)
@@ -29,7 +31,7 @@ def _handle_esperror(self, err, peer):
         if self.debug: print("LazyESPNow: del_peer()")
         # Peers are listed in the order they were registered
         peers = self.get_peers()
-        n_tot, n_enc = self.peer_count()
+        n_tot, _n_enc = self.peer_count()
         # If less than the max peers(20) are registered, assume we hit the limit
         # on encrypted peers(6) and delete an encrypted peer, otherwise an
         # unencrypted peer.
@@ -73,7 +75,6 @@ def _catch_esperror(method):
 
 class LazyESPNow(espnow.ESPNow):
     default_if = network.STA_IF
-    ps_mode = network.WIFI_PS_NONE
     debug = None
     _saved_peers = {}
     wlans = [network.WLAN(i) for i in [network.STA_IF, network.AP_IF]]
@@ -88,7 +89,6 @@ class LazyESPNow(espnow.ESPNow):
             wlan.active(True)
             if self.default_if == network.STA_IF:
                 wlan.disconnect()   # ESP8266 may auto-connect to last AP.
-            wlan.config(ps_mode=self.ps_mode)
 
     @_catch_esperror
     def irecv(self, t=None):
@@ -116,13 +116,13 @@ class LazyESPNow(espnow.ESPNow):
         return super().get_peer(mac)
 
     @_catch_esperror
-    def add_peer(self, mac):
-        return super().add_peer(mac)
+    def add_peer(self, mac, *args, **kwargs):
+        return super().add_peer(mac, *args, **kwargs)
 
     def find_peer(self, mac, msg, lmk=None, ifidx=-1, encrypt=None):
         try:
             _ = super().get_peer(mac)
-        except OSError as err:
+        except OSError:
             self.add_peer(
                 mac, lmk, 0, ifidx,
                 encrypt if encrypt is not None else bool(lmk))
@@ -132,5 +132,5 @@ class LazyESPNow(espnow.ESPNow):
                 for _ in range(num_tries):
                     if super().send(mac, msg):
                         return True
-                    time.sleep_ms(10)
+                    time.sleep(0.10)
         return False

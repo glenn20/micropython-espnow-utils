@@ -55,10 +55,14 @@ sta, ap = wlans
 _sta, _ap = wlans
 timeout = 20  # (seconds) timeout on connect()
 default_channel = 1
+default_pm_mode = None
 if is_esp8266:
-    default_ps_mode = esp.SLEEP_NONE
+    default_pm_mode = esp.SLEEP_NONE
 else:
-    default_ps_mode = network.WIFI_PS_NONE
+    try:
+        default_pm_mode = sta.PM_NONE
+    except AttributeError:
+        pass
 try:
     default_protocol = network.MODE_11B | network.MODE_11G | network.MODE_11N
 except AttributeError:
@@ -79,7 +83,7 @@ def channel(channel=0):
         # On ESP8266, use the AP interface to set the channel
         ap_save = _ap.active()
         _ap.active(True)
-        _ap.config(channel=channel)  # Catch exceptions so we can reset AP_IF
+        _ap.config(channel=channel)
         _ap.active(ap_save)
         return _ap.config("channel")
 
@@ -110,11 +114,11 @@ def reset(
     sta=True,
     ap=False,
     channel=default_channel,
-    ps_mode=default_ps_mode,
+    pm=default_pm_mode,
     protocol=default_protocol,
 ):
     "Reset wifi to STA_IF on, AP_IF off, channel=1 and disconnected"
-    _sta.active(False)  # Force into know state by turning off radio
+    _sta.active(False)  # Force into known state by turning off radio
     _ap.active(False)
     _sta.active(sta)  # Now set to requested state
     _ap.active(ap)
@@ -122,9 +126,12 @@ def reset(
         disconnect()  # For ESP8266
     if sta:  # Not necessary here - but is expected by users
         if is_esp8266:
-            esp.sleep_type(ps_mode)
+            esp.sleep_type(pm)
         else:
-            _sta.config(ps_mode=ps_mode)
+            try:
+                _sta.config(pm=pm)
+            except (ValueError):
+                pass
     try:
         wlan = _sta if sta else _ap if ap else None
         if wlan and (protocol is not None):
@@ -151,11 +158,11 @@ def status():
     try:
         if is_esp8266:
             names = {0: "SLEEP_NONE", 1: "SLEEP_LIGHT", 2: "SLEEP_MODEM"}
-            ps_mode = esp.sleep_type()
+            pm_mode = esp.sleep_type()
         else:
-            names = {0: "WIFI_PS_NONE", 1: "WIFI_PS_MIN_MODEM", 2: "WIFI_PS_MAX_MODEM"}
-            ps_mode = _sta.config("ps_mode")
-        print(", ps_mode={:d} ({})".format(ps_mode, names[ps_mode]), end="")
+            names = {0: "PM_NONE", 1: "PM_MIN_MODEM", 2: "PM_MAX_MODEM"}
+            pm_mode = _sta.config("pm")
+        print(", pm={:d} ({})".format(pm_mode, names[pm_mode]), end="")
     except ValueError:
         pass
     try:
