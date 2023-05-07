@@ -17,12 +17,12 @@ wifi.connect("ssid", "password")
 wifi.status()            # Print details on wifi config
 ```
 
-- `src/scan_for_peer.py`: Scan channels to find an ESPNow peer.
+- `src/espnow_scan.py`: Scan channels to find an ESPNow peer.
 
 ```python
-from scan_for_peer import espnow_scan
+import espnow_scan
 
-espnow_scan(e, b'macadd')  # Print channel if found and leave set to channel
+espnow_scan.scan(e, b'macadd')  # Print channel if found and leave set to channel
 
 ```
 

@@ -21,7 +21,7 @@ def set_channel(channel):
         return ap.config("channel")
 
 
-def espnow_scan(peer, retries=5):
+def scan(peer, retries=5):
     """Scan the wifi channels to find the given espnow peer device.
 
     If the peer is found, the channel will be printed and the channel number
