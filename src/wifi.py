@@ -40,7 +40,6 @@
 import sys
 import time
 import network
-import esp
 
 
 class TimeoutError(Exception):
